@@ -1,0 +1,13 @@
+#myForm {
+    margin: auto;
+    margin-top: 50px;
+    width: 250px;
+}
+
+#myForm input:not([type='submit']) {
+    width: 100%;
+}
+
+.error {
+    border: 1px solid red;
+}
