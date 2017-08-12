@@ -5,16 +5,16 @@
         <link rel="stylesheet" type="text/css" href="index.css">
     </head>
     <body>
-        <form id="myForm" >
+        <form id="myForm" action="success.json" >
             <p><input name="fio" placeholder="Фамилия Имя Отчество" /></p>
             <p><input name="email" placeholder="E-Mail"/></p>
             <p><input name="phone" placeholder="Телефон" /></p>
+            <p><input id="submitBtn" type="submit" value="Submit" />
             <div id="resultContainer"></div>
-            <p><input type="submit" value="Submit" />
         </form>
         <script src="index.js"></script>
         <script>
-            var MyForm = new Form('myForm', ['fio', 'email', 'phone'], 'resultContainer')
+            var MyForm = new Form('myForm', ['fio', 'email', 'phone'], ['resultContainer', 'submitBtn'], true)
         </script>
     </body>
 </html>

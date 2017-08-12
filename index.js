@@ -1,24 +1,26 @@
 
+// Class for our form logic
+function Form(formName, inputNames, anotherElementIds=[], debug=false) {
 
-function Form(formName, inputNames, messageDivId) {
-
-    let Patterns = {
-        'fio': /[А-Я][а-я]+ [А-Я][а-я]+ [А-Я][а-я]+/,
-        'email': /[a-zA-Z0-9.+@]+@(ya\.ru|(yandex\.(ru|ua|by|kz|com)))/,
-        'phone': /\+7\([0-9]+\)[0-9]{3}-[0-9]{2}-[0-9]{2}/,
+    // Patterns to check various fields
+    const patterns = {
+        'fio': /^[А-Я][а-я]+ [А-Я][а-я]+ [А-Я][а-я]+$/,
+        'email': /^[a-zA-Z0-9._+-]+@(ya\.ru|(yandex\.(ru|ua|by|kz|com)))$/,
+        'phone': /^\+7\([0-9]+\)[0-9]{3}-[0-9]{2}-[0-9]{2}$/,
     };
 
-    let ErrorMessages = {
-        'fio': 'Формат ФИО: Ровно три слова.',
-        'email': 'Формат E-Mail: E-Mail-адрес, но только в доменах ya.ru, yandex.ru, yandex.ua, yandex.by, yandex.kz, yandex.com.',
-        'phone': 'Формат телефона: Номер телефона, который начинается на +7, и имеет формат +7(999)999-99-99. Кроме того, сумма всех цифр телефона не должна превышать 30.',
-    }
+    // Various magic numbers
+    const maxPhoneSum = 30
+    const submitBtnId = 'submitBtn'
+    const messageDivId = 'resultContainer'
+    const zero = 48  // ord('0')
 
+    // Validate data fields against patterns and specific constraints
     this.validate = () => {
         let errors = this.inputNames.filter((name) => {
-            return this.elements[name].value.match(Patterns[name]) == null
-        }, []);
-        const zero = 48  // ord('0')
+            return this.elements[name].value.match(patterns[name]) == null
+        });
+        // Sum of numbers in phone should not be greater than maxPhoneSum
         if (!(errors.includes('phone'))) {
             let phone = this.elements['phone'].value
             let sum = phone.split('').reduce((acc, letter, i) => {
@@ -27,13 +29,13 @@ function Form(formName, inputNames, messageDivId) {
                     return acc+num
                 return acc
             }, 0)
-            console.log(sum)
-            if (sum > 30)
-                errors.push('email')
+            if (sum > maxPhoneSum)
+                errors.push('phone')
         }
         return {isValid: (errors.length == 0), errorFields: errors}
     };
 
+    // Return form data as object
     this.getData = () => {
         return this.inputNames.reduce((acc, name) => {
             acc[name] = this.elements[name].value
@@ -41,44 +43,90 @@ function Form(formName, inputNames, messageDivId) {
         }, {})
     };
 
+    // Take "element: data" object and set fields' values
     this.setData = (data) => {
-        this.inputNames.map((name) => {
+        for (let name in data) {
             if (data.hasOwnProperty(name))
                 this.elements[name].value = data[name]
-        })
+        }
     };
 
+    // Check form and send data to server
     this.submit = (e) => {
         e.preventDefault()
-        inputNames.map((name) => {
+        for (let name of this.inputNames) {
             this.elements[name].className = ''
-        })
+        }
         let validation = this.validate()
         if (validation.isValid) {
-            this.showMessage('Its okay, can send data')
+            this.elements[submitBtnId].disabled = true
+            if (this.debug)
+                this.fetchData(this.getURL())
+            else
+                this.fetchData(this.form.action)
         }
         else {
-            validation.errorFields.map((name) => {
+            for (let name of validation.errorFields) {
                 this.elements[name].className = 'error'
-            })
+            }
         }
     };
 
-    this.showMessage = (message) => {
-        this.elements['message'].innerText = message
+    // Send data to server by url
+    this.fetchData = (url) => {
+        var self = this
+        fetch(url).then((response) => {
+            return response.json()
+        }).then((data) => {
+            switch (data.status ) {
+                case 'success': 
+                    self.showMessage('Success', 'success')
+                    this.elements[submitBtnId].disabled = false
+                    break
+                case 'error':
+                    self.showMessage(data.reason, 'error')
+                    this.elements[submitBtnId].disabled = false
+                    break
+                case 'progress':
+                    self.showMessage('Waiting...', 'progress')
+                    if (this.debug)
+                        setTimeout(() => {this.fetchData(this.getURL())}, data.timeout)
+                    else
+                        setTimeout(() => {this.fetchData(url)}), data.timeout
+                    break
+                default:
+                    console.log('Что-то пошло не так: '+data.status)
+                    this.elements[submitBtnId].disabled = false
+            }
+        })
     }
 
-    this.init = (formName, inputNames) => {
+    // Random URL, for testing only
+    this.getURL = () => {
+        return ['error.json', 'success.json', 'progress.json'][Math.floor(Math.random() * 3)]
+    }
+
+    // Set resultContainer message
+    this.showMessage = (message, status=null) => {
+        if (status != null)
+            this.elements[messageDivId].className = status
+        this.elements[messageDivId].innerText = message
+    }
+
+    // Constructor
+    this.init = (formName, inputNames, anotherElementIds, debug) => {
+        this.debug = debug
         this.elements = {}
         this.form = document.forms[formName];
         this.inputNames = inputNames
-        this.elements = this.inputNames.reduce((acc, name) => {
-            acc[name] = this.form.elements[name]
-            return acc
-        }, {})
-        this.elements['message'] = document.getElementById(messageDivId)
+        this.elements = {}
+        for (let name of inputNames)
+            this.elements[name] = this.form.elements[name]
+        for (let elementId of anotherElementIds)
+            this.elements[elementId] = document.getElementById(elementId)
         this.form.addEventListener('submit', this.submit)
     };
 
-    this.init(formName, inputNames)
+    // Initialize our form
+    this.init(formName, inputNames, anotherElementIds, debug)
 }
