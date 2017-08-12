@@ -103,7 +103,7 @@ function Form(formName, inputNames, anotherElementIds=[], debug=false) {
 
     // Random URL, for testing only
     this.getURL = () => {
-        return ['error.json', 'success.json', 'progress.json'][Math.floor(Math.random() * 3)]
+        return ['responses/error.json', 'responses/success.json', 'responses/progress.json'][Math.floor(Math.random() * 3)]
     }
 
     // Set resultContainer message
